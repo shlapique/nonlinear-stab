@@ -58,4 +58,9 @@ H
 # x2 <- Sym("x_2")
 # ellipse_function <- matrix(c("x1", "x2"), 1)%*%H
 
-show <- yac_str(paste0("Plot2D({x^2 + 2*y + 3})"))
+x<-seq(-1.1,1.1,length=1000)
+y<-seq(-1,1,length=1000)
+z<-outer(x,y,function(x,y) 4*y^2+x^2+x*y -1 )
+X11()
+contour(x,y,z,levels=0)
+check_device()
