@@ -1,3 +1,5 @@
+library(ggplot2)
+
 check_device <- function()
 {
     while (!is.null(dev.list())) Sys.sleep(1)
@@ -14,9 +16,9 @@ pplot <- function(M, Color) {
     convex <- chull(t(M))
     tmp <- M[1:2, convex]
     data <- as.data.frame(t(cbind(tmp, tmp[,1])))
-    colnames(data) <- c("x", "f")
+    colnames(data) <- c("x", "y")
     # data <- head(data, -1)
-    plot(data, type="b", col=Color)
+    return(geom_path(data, mapping=aes(x=x, y=y, z=NULL), color=Color))
 }
 
 xsum <- function(h, vec) {
@@ -68,16 +70,13 @@ H
 
 x<-seq(-0.1, 0.1, length=1000)
 y<-seq(-0.1, 0.1, length=1000)
-z<-outer(x, y, function(x,y) 558.84381*x^2 + 624.81490*y^2 -1)
-# z<-outer(x, y, function(x,y) 370.94*x^2 + 352.55*y^2 -1 )
+z<-outer(x, y, function(x,y) H[1, 1]*x^2 + H[2, 2]*y^2 + H[1, 2]*2*x*y -1)
 
-# X11()
-# contour(x, y, z, levels=0)
-# check_device()
+df <- data.frame(expand.grid(x = x, y = y), z = c(z)) 
+window <- ggplot(df, aes(x = x, y = y, z = z)) +
+  geom_contour(aes(z = z), breaks = 0)
 
-# X11()
-# pplot(U, "green")
-# check_device()
+window <- window + pplot(U, "green")
 
 ei <- eigen(H)
 ei_vals <- ei$values
@@ -100,9 +99,7 @@ xp2
 X <- matrix(c(xp1, xp2, -xp1, -xp2), 2)
 X
 
-# X11()
-# pplot(X, "green")
-# check_device()
+window <- window + pplot(X, "purple")
 
 a <- xsum(H, X[,2] + X[,1])
 a
@@ -110,9 +107,7 @@ P <- matrix(c(X, xsum(H, X[,2] + X[,1]), xsum(H, X[,3] + X[,2]), xsum(H, X[,4] +
               xsum(H, X[,4] + X[,1])), 2)
 P
 
-# X11()
-# pplot(P, "green")
-# check_device()
+window <- window + pplot(P, "red")
 
 print("p:")
 p <- matrix(c(p1, p2, -p1, -p2, p1), 2)
@@ -132,6 +127,9 @@ for(i in 1:(ncol(U)-1))
     U_out <- cbind(U_out, tmp)
     print(U_out)
 }
+U_out
+
 X11()
-pplot(U_out, "green")
+window <- window + pplot(U_out, "yellow")
+window
 check_device()
