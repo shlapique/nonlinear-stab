@@ -13,11 +13,9 @@ phi <- function(t, ei_vals, ei_vecs) {
 }
 
 pplot <- function(M, Color) {
-    convex <- chull(t(M))
-    tmp <- M[1:2, convex]
+    tmp <- M[1:nrow(M), chull(t(M))]
     data <- as.data.frame(t(cbind(tmp, tmp[,1])))
     colnames(data) <- c("x", "y")
-    # data <- head(data, -1)
     return(geom_path(data, mapping=aes(x=x, y=y, z=NULL), color=Color))
 }
 
@@ -90,23 +88,19 @@ p2 <- Re(ei_vecs[,2])
 p2
 
 print("xp1:")
-xp1 <- (solve(H)%*%p1) / c(sqrt(p1%*%(solve(H)%*%p1)))
+xp1 <- xsum(H, p1)
 xp1
 print("xp2:")
-xp2 <- (solve(H)%*%p2) / c(sqrt(p2%*%(solve(H)%*%p2)))
+xp2 <- xsum(H, p2)
 xp2
 
 X <- matrix(c(xp1, xp2, -xp1, -xp2), 2)
 X
-
 window <- window + pplot(X, "purple")
 
-a <- xsum(H, X[,2] + X[,1])
-a
 P <- matrix(c(X, xsum(H, X[,2] + X[,1]), xsum(H, X[,3] + X[,2]), xsum(H, X[,4] + X[,3]),
               xsum(H, X[,4] + X[,1])), 2)
 P
-
 window <- window + pplot(P, "red")
 
 print("p:")
@@ -128,8 +122,43 @@ for(i in 1:(ncol(U)-1))
     print(U_out)
 }
 U_out
+window <- window + pplot(U_out, "yellow")
+
+print("U: new")
+U <- U[, -ncol(U)]
+U <- cbind(U, xsum(H, P[, 1] + P[, 2]))
+U
+
+print("TEST U_5")
+U_5 <- U[1:nrow(U), chull(t(U))]
+U_5 <- cbind(U_5, U_5[, 1])
+U_5
+
+print("p: new")
+p <- p[, -ncol(p)]
+p <- cbind(p, p[, 1] + p[, 2])
+p
+print("p_5")
+p_5 <- p[1:nrow(p), chull(t(p))]
+p_5 <- cbind(p_5, p_5[, 1])
+p_5
+
+U_out_5 <- matrix(c(0, 0), 2)
+U_out_5
+
+for(i in 1:(ncol(U)))
+{
+    print(paste("Iteration(i) =", i))
+    tmp <- solve(t(p_5[1:2, i:(i+1)]))%*%c(t(p_5[,i])%*%U_5[,i], t(p_5[,i+1])%*%U_5[,i+1])
+    print(tmp)
+    U_out_5 <- cbind(U_out_5, tmp)
+    print(U_out_5)
+}
+U_out_5
+window <- window + pplot(U_out_5, "pink")    
+
+window <- window + pplot(U_5[, -ncol(U_5)], "black")
 
 X11()
-window <- window + pplot(U_out, "yellow")
 window
 check_device()
