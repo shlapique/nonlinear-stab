@@ -24,13 +24,12 @@ xsum <- function(h, vec) {
 }
 
 
-
 print("A:")
 A_tilde <- matrix(c(2*sqrt(2), 2*sqrt(2), -sqrt(2), 0), 2)
 delta <- 0.04
 A_tilde
 
-print("eigen normalized:")
+print("eigen (normalized)...")
 ei <- eigen(A_tilde)
 ei_vals <- ei$values
 ei_vecs <- ei$vectors
@@ -38,11 +37,6 @@ print("ei_vals:")
 ei_vals
 print("ei_vecs:")
 ei_vecs
-
-print("TEST FOR Im(ei_vecs[1, 1]):")
-Im(ei_vecs[1, 1])
-print("TEST FOR Im(ei_vecs[1, 2]):")
-Im(ei_vecs[1, 2])
 
 print("phi(0): ")
 phi(0, ei_vals, ei_vecs)
@@ -74,6 +68,7 @@ df <- data.frame(expand.grid(x = x, y = y), z = c(z))
 window <- ggplot(df, aes(x = x, y = y, z = z)) +
   geom_contour(aes(z = z), breaks = 0)
 
+# outer 4
 window <- window + pplot(U, "green")
 
 ei <- eigen(H)
@@ -96,11 +91,13 @@ xp2
 
 X <- matrix(c(xp1, xp2, -xp1, -xp2), 2)
 X
+# inner 4
 window <- window + pplot(X, "purple")
 
 P <- matrix(c(X, xsum(H, X[,2] + X[,1]), xsum(H, X[,3] + X[,2]), xsum(H, X[,4] + X[,3]),
               xsum(H, X[,4] + X[,1])), 2)
 P
+# inner 8
 window <- window + pplot(P, "red")
 
 print("p:")
@@ -155,8 +152,10 @@ for(i in 1:(ncol(U)))
     print(U_out_5)
 }
 U_out_5
+# outer 5
 window <- window + pplot(U_out_5, "pink")    
 
+# inner 5
 window <- window + pplot(U_5[, -ncol(U_5)], "black")
 
 X11()
