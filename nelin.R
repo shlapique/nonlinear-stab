@@ -5,6 +5,28 @@ check_device <- function()
     while (!is.null(dev.list())) Sys.sleep(1)
 }
 
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  plots <- c(list(...), plotlist)
+  numPlots = length(plots)
+  print(paste("NUMBER OF PLOTS:", numPlots))
+  if (is.null(layout)) {
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+ if (numPlots==1) {
+    print(plots[[1]])
+  } else {
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    for (i in 1:numPlots) {
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
 phi <- function(t, ei_vals, ei_vecs) {
     phi_1 <- exp(Re(ei_vals[1])*t)*(cos(Im(ei_vals[1])*t)*Re(ei_vecs[,1]) - sin(Im(ei_vals[1])*t)*Im(ei_vecs[,1]))
     phi_2 <- exp(Re(ei_vals[2])*t)*(cos(Im(ei_vals[2])*t)*Im(ei_vecs[,2]) + sin(Im(ei_vals[2])*t)*Re(ei_vecs[,2]))
@@ -13,7 +35,7 @@ phi <- function(t, ei_vals, ei_vecs) {
 }
 
 pplot <- function(M, Color) {
-    tmp <- M[1:nrow(M), chull(t(M))]
+    tmp <- M[, chull(t(M))]
     data <- as.data.frame(t(cbind(tmp, tmp[,1])))
     colnames(data) <- c("x", "y")
     return(geom_path(data, mapping=aes(x=x, y=y, z=NULL), color=Color))
@@ -23,8 +45,51 @@ xsum <- function(h, vec) {
     return((solve(h)%*%vec) / c(sqrt(vec%*%(solve(h)%*%vec))))
 }
 
+minkowski_sum <- function(mat1, mat2)
+{
+    temp <- matrix(0, nrow(mat1))
+	for(i in 1:ncol(mat1)){
+        for(j in 1:ncol(mat2)){
+            temp <- cbind(temp, mat1[, i] + mat2[, j])
+        }
+    }
+    temp <- temp[, chull(t(temp))]
+    return(temp)
+}
 
-print("A:")
+# bulids polyhedral approximations m in {4, 5, 6, 7, 8}
+poly_approximations <- function(P, pp, Uin_prev, Xu)
+{
+    a <- 5 # bc we have 4p fig before
+    b <- 8
+    plots <- list()
+    for(j in 1:(b-a+1))
+    {
+        print(paste("WORKDS", j))
+        P[, ncol(P)] <- pp[, j]
+        Uin <- cbind(Uin_prev[, -ncol(Uin_prev)], Xu[, j+1])
+        order <- chull(t(Uin))
+        Uin <- Uin[, order]
+        Uin <- cbind(Uin, Uin[, 1])
+        P <- P[, order]
+        P <- cbind(P, P[, 1])
+        Uout <- matrix(c(0, 0), 2)
+        for(i in 1:(ncol(Uin)-1))
+        {
+            tmp <- solve(t(P[1:2, i:(i+1)]))%*%c(t(P[,i])%*%Uin[,i], t(P[,i+1])%*%Uin[,i+1])
+            # print(tmp)
+            Uout <- cbind(Uout, tmp)
+            # print(Uout)
+        }
+        plots[[j]] <- list(Uin, Uout)
+        Uin_prev <- Uin
+    }
+    print(paste("PLOTS:", length(plots)))
+    return(plots)
+}
+
+
+print("A_tilde:")
 A_tilde <- matrix(c(2*sqrt(2), 2*sqrt(2), -sqrt(2), 0), 2)
 delta <- 0.04
 A_tilde
@@ -43,7 +108,7 @@ phi(0, ei_vals, ei_vecs)
 print("phi(delta): ")
 phi(delta, ei_vals, ei_vecs)
 
-print("PHI(delta)PHI^{-1}(0):")
+print("A = PHI(delta)PHI^{-1}(0):")
 A <- phi(delta, ei_vals, ei_vecs)%*%solve(phi(0, ei_vals, ei_vecs))
 print(A)
 
@@ -56,20 +121,32 @@ V
 print("U:")
 U <- B%*%V
 U
+
+# 0-controll sets
+X <- list(-solve(A)%*%U)
+X[[1]]
+window1 <- ggplot() + pplot(X[[1]], "purple")
+for(i in 2:6){
+    X[[i]] <- minkowski_sum(solve(A)%*%X[[i-1]], X[[1]])
+    window1 <- window1 + pplot(X[[i]], "yellow")
+}
+print("X:")
+X
+
+
 print("H:")
 H <- t(solve(B))%*%diag(2)%*%solve(B)
 H
 
-x<-seq(-0.1, 0.1, length=1000)
-y<-seq(-0.1, 0.1, length=1000)
+# ellipse
+x<-seq(-0.1, 0.1, length=100)
+y<-seq(-0.1, 0.1, length=100)
 z<-outer(x, y, function(x,y) H[1, 1]*x^2 + H[2, 2]*y^2 + H[1, 2]*2*x*y -1)
-
 df <- data.frame(expand.grid(x = x, y = y), z = c(z)) 
-window <- ggplot(df, aes(x = x, y = y, z = z)) +
-  geom_contour(aes(z = z), breaks = 0)
+ellipse <- ggplot(df, aes(x = x, y = y, z = z)) +
+  geom_contour(aes(z = z), breaks = 0, colour="green")
 
-# outer 4
-window <- window + pplot(U, "green")
+# window <- window + pplot(U, "green")
 
 ei <- eigen(H)
 ei_vals <- ei$values
@@ -81,83 +158,177 @@ p1
 print("p2:")
 p2 <- Re(ei_vecs[,2])
 p2
+print("p3:")
+p3 <- -p1
+p3
+print("p4:")
+p4 <- -p2
+p4
 
-print("xp1:")
-xp1 <- xsum(H, p1)
-xp1
-print("xp2:")
-xp2 <- xsum(H, p2)
-xp2
-
-X <- matrix(c(xp1, xp2, -xp1, -xp2), 2)
-X
-# inner 4
-window <- window + pplot(X, "purple")
-
-P <- matrix(c(X, xsum(H, X[,2] + X[,1]), xsum(H, X[,3] + X[,2]), xsum(H, X[,4] + X[,3]),
-              xsum(H, X[,4] + X[,1])), 2)
+print("P:")
+P <- matrix(c(p1, p2, p3, p4, p1), 2)
 P
-# inner 8
-window <- window + pplot(P, "red")
 
-print("p:")
-p <- matrix(c(p1, p2, -p1, -p2, p1), 2)
-p
+print("Xu1:")
+Xu1 <- xsum(H, p1)
+Xu1
+print("Xu2:")
+Xu2 <- xsum(H, p2)
+Xu2
+print("Xu3:")
+Xu3 <- xsum(H, p3)
+Xu3
+print("Xu4:")
+Xu4 <- xsum(H, p4)
+Xu4
 
-print("new U")
-U <- cbind(X, X[,1])
-U
-U_out <- matrix(c(0, 0), 2)
-U_out
+print("pp:")
+pp <- matrix(c(p1 + p2, p2 + p3, p3 + p4, p4 + p1), 2)
+pp
 
-for(i in 1:(ncol(U)-1))
+Xu <- matrix(c(0, 0), 2)
+for(i in 1:4)
+    Xu <- cbind(Xu, xsum(H, pp[, i]))
+Xu
+
+# 4
+Uin4 <- matrix(c(Xu1, Xu2, Xu3, Xu4, Xu1), 2)
+Uout4 <- matrix(c(0, 0), 2)
+for(i in 1:(ncol(Uin4)-1))
 {
-    print(paste("Iteration(i) =", i))
-    tmp <- solve(t(P[1:2, i:(i+1)]))%*%c(t(P[,i])%*%U[,i], t(P[,i+1])%*%U[,i+1])
+    tmp <- solve(t(P[1:2, i:(i+1)]))%*%c(t(P[,i])%*%Uin4[,i], t(P[,i+1])%*%Uin4[,i+1])
     print(tmp)
-    U_out <- cbind(U_out, tmp)
-    print(U_out)
+    Uout4 <- cbind(Uout4, tmp)
+    print(Uout4)
 }
-U_out
-window <- window + pplot(U_out, "yellow")
+poly4 <- ellipse + pplot(Uin4, "red") + pplot(Uout4, "blue")
 
-print("U: new")
-U <- U[, -ncol(U)]
-U <- cbind(U, xsum(H, P[, 1] + P[, 2]))
-U
-
-print("TEST U_5")
-U_5 <- U[1:nrow(U), chull(t(U))]
-U_5 <- cbind(U_5, U_5[, 1])
-U_5
-
-print("p: new")
-p <- p[, -ncol(p)]
-p <- cbind(p, p[, 1] + p[, 2])
-p
-print("p_5")
-p_5 <- p[1:nrow(p), chull(t(p))]
-p_5 <- cbind(p_5, p_5[, 1])
-p_5
-
-U_out_5 <- matrix(c(0, 0), 2)
-U_out_5
-
-for(i in 1:(ncol(U)))
+l <- poly_approximations(P, pp, Uin4, Xu)
+l
+wout <- list()
+for(i in 1:length(l))
 {
-    print(paste("Iteration(i) =", i))
-    tmp <- solve(t(p_5[1:2, i:(i+1)]))%*%c(t(p_5[,i])%*%U_5[,i], t(p_5[,i+1])%*%U_5[,i+1])
-    print(tmp)
-    U_out_5 <- cbind(U_out_5, tmp)
-    print(U_out_5)
+    print("TEST")
+    print(l[[i]][[1]])
+    p <- ellipse + pplot(l[[i]][[1]], "red") + pplot(l[[i]][[2]], "blue")
+    wout <- append(wout, p)
 }
-U_out_5
-# outer 5
-window <- window + pplot(U_out_5, "pink")    
 
-# inner 5
-window <- window + pplot(U_5[, -ncol(U_5)], "black")
+# 5
+P[,ncol(P)] <- pp[, 1]
+Uin5 <- cbind(Uin4[, -ncol(Uin4)], Xu[, 2])
+order <- chull(t(Uin5))
+Uin5 <- Uin5[, order]
+Uin5 <- cbind(Uin5, Uin5[, 1])
+P <- P[, order]
+P <- cbind(P, P[, 1])
+Uout5 <- matrix(c(0, 0), 2)
+for(i in 1:(ncol(Uin5)-1))
+{
+    tmp <- solve(t(P[1:2, i:(i+1)]))%*%c(t(P[,i])%*%Uin5[,i], t(P[,i+1])%*%Uin5[,i+1])
+    print(tmp)
+    Uout5 <- cbind(Uout5, tmp)
+    print(Uout5)
+}
+poly5 <- ellipse + pplot(Uin5, "red") + pplot(Uout5, "blue")
+
+# 6
+P[, ncol(P)] <- pp[, 2]
+Uin6 <- cbind(Uin5[, -ncol(Uin5)], Xu[, 3])
+order <- chull(t(Uin6))
+Uin6 <- Uin6[, order]
+Uin6 <- cbind(Uin6, Uin6[, 1])
+P <- P[, order]
+P <- cbind(P, P[, 1])
+Uout6 <- matrix(c(0, 0), 2)
+for(i in 1:(ncol(Uin6)-1))
+{
+    tmp <- solve(t(P[1:2, i:(i+1)]))%*%c(t(P[,i])%*%Uin6[,i], t(P[,i+1])%*%Uin6[,i+1])
+    print(tmp)
+    Uout6 <- cbind(Uout6, tmp)
+    print(Uout6)
+}
+poly6 <- ellipse + pplot(Uin6, "red") + pplot(Uout6, "blue")
+
+
+# X <- matrix(c(xp1, xp2, -xp1, -xp2), 2)
+# X
+# inner 4
+# window <- window + pplot(X, "purple")
+
+# P <- matrix(c(X, xsum(H, X[,2] + X[,1]), xsum(H, X[,3] + X[,2]), xsum(H, X[,4] + X[,3]),
+#               xsum(H, X[,4] + X[,1])), 2)
+# P
+# # inner 8
+# window <- window + pplot(P, "red")
+
+
+# print("new U")
+# U <- cbind(X, X[,1])
+# U
+# U_out <- matrix(c(0, 0), 2)
+# U_out
+
+# for(i in 1:(ncol(U)-1))
+# {
+#     print(paste("Iteration(i) =", i))
+#     tmp <- solve(t(P[1:2, i:(i+1)]))%*%c(t(P[,i])%*%U[,i], t(P[,i+1])%*%U[,i+1])
+#     print(tmp)
+#     U_out <- cbind(U_out, tmp)
+#     print(U_out)
+# }
+# U_out
+# window <- window + pplot(U_out, "yellow")
+
+# print("U: new")
+# U <- U[, -ncol(U)]
+# U <- cbind(U, xsum(H, P[, 1] + P[, 2]))
+# U
+
+# print("TEST U_5")
+# U_5 <- U[1:nrow(U), chull(t(U))]
+# U_5 <- cbind(U_5, U_5[, 1])
+# U_5
+
+# print("p: new")
+# p <- p[, -ncol(p)]
+# p <- cbind(p, p[, 1] + p[, 2])
+# p
+# print("p_5")
+# p_5 <- p[1:nrow(p), chull(t(p))]
+# p_5 <- cbind(p_5, p_5[, 1])
+# p_5
+
+# U_out_5 <- matrix(c(0, 0), 2)
+# U_out_5
+
+# for(i in 1:(ncol(U)))
+# {
+#     print(paste("Iteration(i) =", i))
+#     tmp <- solve(t(p_5[1:2, i:(i+1)]))%*%c(t(p_5[,i])%*%U_5[,i], t(p_5[,i+1])%*%U_5[,i+1])
+#     print(tmp)
+#     U_out_5 <- cbind(U_out_5, tmp)
+#     print(U_out_5)
+# }
+# U_out_5
+# # outer 5
+# window <- window + pplot(U_out_5, "pink")    
+
+# # inner 5
+# window <- window + pplot(U_5[, -ncol(U_5)], "black")
+
+# X11()
+# window1
+# check_device()
+
+# X11()
+# window
+# check_device()
 
 X11()
-window
+# multiplot(poly4, poly5, poly6, poly7, poly8, cols=2)
+# l <- list(poly4, poly5, poly6)
+# multiplot(poly4, poly5, poly6)
+# multiplot(plotlist=l)
+multiplot(plotlist=wout)
 check_device()
