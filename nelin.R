@@ -9,7 +9,6 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   library(grid)
   plots <- c(list(...), plotlist)
   numPlots = length(plots)
-  print(paste("NUMBER OF PLOTS:", numPlots))
   if (is.null(layout)) {
     layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
                     ncol = cols, nrow = ceiling(numPlots/cols))
@@ -65,7 +64,6 @@ poly_approximations <- function(P, pp, Uin_prev, Xu)
     plots <- list()
     for(j in 1:(b-a+1))
     {
-        print(paste("WORKDS", j))
         P[, ncol(P)] <- pp[, j]
         Uin <- cbind(Uin_prev[, -ncol(Uin_prev)], Xu[, j+1])
         order <- chull(t(Uin))
@@ -84,7 +82,6 @@ poly_approximations <- function(P, pp, Uin_prev, Xu)
         plots[[j]] <- list(Uin, Uout)
         Uin_prev <- Uin
     }
-    print(paste("PLOTS:", length(plots)))
     return(plots)
 }
 
@@ -189,146 +186,33 @@ pp
 Xu <- matrix(c(0, 0), 2)
 for(i in 1:4)
     Xu <- cbind(Xu, xsum(H, pp[, i]))
+print("Xu:")
 Xu
 
-# 4
+# 4 ###
 Uin4 <- matrix(c(Xu1, Xu2, Xu3, Xu4, Xu1), 2)
 Uout4 <- matrix(c(0, 0), 2)
 for(i in 1:(ncol(Uin4)-1))
 {
     tmp <- solve(t(P[1:2, i:(i+1)]))%*%c(t(P[,i])%*%Uin4[,i], t(P[,i+1])%*%Uin4[,i+1])
-    print(tmp)
+    # print(tmp)
     Uout4 <- cbind(Uout4, tmp)
-    print(Uout4)
+    # print(Uout4)
 }
 poly4 <- ellipse + pplot(Uin4, "red") + pplot(Uout4, "blue")
+#######
 
 l <- poly_approximations(P, pp, Uin4, Xu)
-l
-wout <- list()
+poly <- list(poly4)
 for(i in 1:length(l))
 {
-    print("TEST")
-    print(l[[i]][[1]])
     p <- ellipse + pplot(l[[i]][[1]], "red") + pplot(l[[i]][[2]], "blue")
-    wout <- append(wout, p)
+    poly[[i+1]] <- p
 }
-
-# 5
-P[,ncol(P)] <- pp[, 1]
-Uin5 <- cbind(Uin4[, -ncol(Uin4)], Xu[, 2])
-order <- chull(t(Uin5))
-Uin5 <- Uin5[, order]
-Uin5 <- cbind(Uin5, Uin5[, 1])
-P <- P[, order]
-P <- cbind(P, P[, 1])
-Uout5 <- matrix(c(0, 0), 2)
-for(i in 1:(ncol(Uin5)-1))
-{
-    tmp <- solve(t(P[1:2, i:(i+1)]))%*%c(t(P[,i])%*%Uin5[,i], t(P[,i+1])%*%Uin5[,i+1])
-    print(tmp)
-    Uout5 <- cbind(Uout5, tmp)
-    print(Uout5)
-}
-poly5 <- ellipse + pplot(Uin5, "red") + pplot(Uout5, "blue")
-
-# 6
-P[, ncol(P)] <- pp[, 2]
-Uin6 <- cbind(Uin5[, -ncol(Uin5)], Xu[, 3])
-order <- chull(t(Uin6))
-Uin6 <- Uin6[, order]
-Uin6 <- cbind(Uin6, Uin6[, 1])
-P <- P[, order]
-P <- cbind(P, P[, 1])
-Uout6 <- matrix(c(0, 0), 2)
-for(i in 1:(ncol(Uin6)-1))
-{
-    tmp <- solve(t(P[1:2, i:(i+1)]))%*%c(t(P[,i])%*%Uin6[,i], t(P[,i+1])%*%Uin6[,i+1])
-    print(tmp)
-    Uout6 <- cbind(Uout6, tmp)
-    print(Uout6)
-}
-poly6 <- ellipse + pplot(Uin6, "red") + pplot(Uout6, "blue")
-
-
-# X <- matrix(c(xp1, xp2, -xp1, -xp2), 2)
-# X
-# inner 4
-# window <- window + pplot(X, "purple")
-
-# P <- matrix(c(X, xsum(H, X[,2] + X[,1]), xsum(H, X[,3] + X[,2]), xsum(H, X[,4] + X[,3]),
-#               xsum(H, X[,4] + X[,1])), 2)
-# P
-# # inner 8
-# window <- window + pplot(P, "red")
-
-
-# print("new U")
-# U <- cbind(X, X[,1])
-# U
-# U_out <- matrix(c(0, 0), 2)
-# U_out
-
-# for(i in 1:(ncol(U)-1))
-# {
-#     print(paste("Iteration(i) =", i))
-#     tmp <- solve(t(P[1:2, i:(i+1)]))%*%c(t(P[,i])%*%U[,i], t(P[,i+1])%*%U[,i+1])
-#     print(tmp)
-#     U_out <- cbind(U_out, tmp)
-#     print(U_out)
-# }
-# U_out
-# window <- window + pplot(U_out, "yellow")
-
-# print("U: new")
-# U <- U[, -ncol(U)]
-# U <- cbind(U, xsum(H, P[, 1] + P[, 2]))
-# U
-
-# print("TEST U_5")
-# U_5 <- U[1:nrow(U), chull(t(U))]
-# U_5 <- cbind(U_5, U_5[, 1])
-# U_5
-
-# print("p: new")
-# p <- p[, -ncol(p)]
-# p <- cbind(p, p[, 1] + p[, 2])
-# p
-# print("p_5")
-# p_5 <- p[1:nrow(p), chull(t(p))]
-# p_5 <- cbind(p_5, p_5[, 1])
-# p_5
-
-# U_out_5 <- matrix(c(0, 0), 2)
-# U_out_5
-
-# for(i in 1:(ncol(U)))
-# {
-#     print(paste("Iteration(i) =", i))
-#     tmp <- solve(t(p_5[1:2, i:(i+1)]))%*%c(t(p_5[,i])%*%U_5[,i], t(p_5[,i+1])%*%U_5[,i+1])
-#     print(tmp)
-#     U_out_5 <- cbind(U_out_5, tmp)
-#     print(U_out_5)
-# }
-# U_out_5
-# # outer 5
-# window <- window + pplot(U_out_5, "pink")    
-
-# # inner 5
-# window <- window + pplot(U_5[, -ncol(U_5)], "black")
 
 # X11()
-# window1
-# check_device()
-
-# X11()
-# window
 # check_device()
 
 X11()
-# multiplot(poly4, poly5, poly6, poly7, poly8, cols=2)
-# l <- list(poly4, poly5, poly6)
-# multiplot(poly4, poly5, poly6)
-# multiplot(plotlist=l)
-multiplot(plotlist=wout)
+multiplot(plotlist=poly, cols=2)
 check_device()
