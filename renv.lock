@@ -72,6 +72,20 @@
       ],
       "Hash": "ae6cbbe1492f4de79c45fce06f967ce8"
     },
+    "Ryacas": {
+      "Package": "Ryacas",
+      "Version": "1.1.5",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "Rcpp",
+        "magrittr",
+        "methods",
+        "stats"
+      ],
+      "Hash": "fe6e52622a206e5a03f07df5fc1c71e4"
+    },
     "animation": {
       "Package": "animation",
       "Version": "2.7",
@@ -248,6 +262,13 @@
         "rlang"
       ],
       "Hash": "001cecbeac1cff9301bdc3775ee46a86"
+    },
+    "lpSolve": {
+      "Package": "lpSolve",
+      "Version": "5.6.20",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "2801c8082e89ed84cc0dbe43de850d31"
     },
     "magick": {
       "Package": "magick",

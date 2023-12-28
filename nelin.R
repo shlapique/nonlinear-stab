@@ -1,4 +1,5 @@
 library(ggplot2)
+library(lpSolve)
 
 check_device <- function()
 {
@@ -125,10 +126,14 @@ X[[1]]
 window1 <- ggplot() + pplot(X[[1]], "purple")
 for(i in 2:6){
     X[[i]] <- minkowski_sum(solve(A)%*%X[[i-1]], X[[1]])
-    window1 <- window1 + pplot(X[[i]], "yellow")
+    window1 <- window1 + pplot(X[[i]], "red")
 }
 print("X:")
 X
+
+x0 <- c(0.1, 0.2)
+point <- data.frame(x=x0[1], y=x0[2])
+window1 <- window1 + geom_point(point, mapping=aes(x=x, y=y))
 
 
 print("H:")
@@ -210,9 +215,13 @@ for(i in 1:length(l))
     poly[[i+1]] <- p
 }
 
+# # N_min
+# Nmin <- 
+
 # X11()
+# window1
 # check_device()
 
-X11()
-multiplot(plotlist=poly, cols=2)
-check_device()
+# X11()
+# multiplot(plotlist=poly, cols=2)
+# check_device()
