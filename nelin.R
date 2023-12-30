@@ -1,5 +1,7 @@
 library(ggplot2)
 library(lpSolve)
+library(Ryacas)
+library(stringr)
 
 check_device <- function()
 {
@@ -86,6 +88,61 @@ poly_approximations <- function(P, pp, Uin_prev, Xu)
     return(plots)
 }
 
+get_x_trajectory <- function(X, Nmin, A, U, control, trajectory)
+{
+    ans <- list()
+    lambda <- ysym(c("l1", "l2", "l3", "l4"))
+    for(k in 1:(Nmin-1)) 
+    {
+        print("PRINT FROM FUNC FOR TESTING trajectory:")
+        print(paste("K=", k))
+        print(trajectory[, k])
+        mu <- (c("mu1"))
+        for(i in 2:ncol(X[[Nmin-k]]))
+        {
+            mu[i] <- paste0("mu", i)
+        }
+        mu <- ysym(mu)
+        print(mu)
+        temp <- ysym(X[[Nmin-k]])%*%mu - ysym(U)%*%lambda - A%*%trajectory[, k]
+        print(temp)
+        constr1 <- as.numeric(str_extract_all(temp[1], "[+-]?[0-9]*\\.[0-9]*e?[+-]?[0-9]*")[[1]])
+        constr1_rhs <- -constr1[length(constr1)]
+        constr1 <- constr1[-length(constr1)]
+        constr2 <- as.numeric(str_extract_all(temp[2], "[+-]?[0-9]*\\.[0-9]*e?[+-]?[0-9]*")[[1]])
+        constr2_rhs <- -constr2[length(constr2)]
+        constr2 <- constr2[-length(constr2)]
+
+        constr3 <- c(replicate(ncol(X[[Nmin-k]]), 0))
+        constr3 <- append(constr3, c(replicate(4, 1)))
+
+        objective_coefs <- replicate(ncol(X[[Nmin-k]]), 1)
+        objective_coefs <- append(objective_coefs, c(replicate(4, 0)))
+        print(objective_coefs)
+        constraints_matrix <- matrix(c(constr1, constr2, constr3), nrow=3, byrow=TRUE)
+        print("CONSTRAINTS MATRIX:")
+        print(constraints_matrix)
+
+        constraints_rhs <- c(constr1_rhs, constr2_rhs, 1)
+        print("CONSTR RHS:")
+        print(constraints_rhs)
+        constraints_dir <- c("=", "=", "=")
+        res <- lp("min", objective_coefs, constraints_matrix, constraints_dir, constraints_rhs)
+        print(paste("K=", k))
+        print(res$solution)
+        # FIXME
+        sol <- res$solution
+        sol <- c(sol[!sol == 0], 0)
+        # FIXME
+        print(sol)
+        control <- cbind(control, U%*%sol)
+        print(control)
+        trajectory <- cbind(trajectory, A%*%trajectory[, k] + control[, k + 1])
+        print(control)
+        print(trajectory)
+    }
+    return(trajectory)
+}
 
 print("A_tilde:")
 A_tilde <- matrix(c(2*sqrt(2), 2*sqrt(2), -sqrt(2), 0), 2)
@@ -131,10 +188,90 @@ for(i in 2:6){
 print("X:")
 X
 
-x0 <- c(0.1, 0.2)
+# N_min
+Nmin <- 6
+x0 <- c(0.1, 0.24)
 point <- data.frame(x=x0[1], y=x0[2])
 window1 <- window1 + geom_point(point, mapping=aes(x=x, y=y))
 
+# LP Nmin 
+objective_coefs <- replicate(ncol(X[[Nmin]]), 1)
+print(objective_coefs)
+constraints_matrix <- matrix(c(X[[Nmin]][1, ],
+                               X[[Nmin]][2, ]), nrow=2, byrow=TRUE)
+constraints_rhs <- c(x0[1], x0[2])
+constraints_dir <- c("=", "=")
+problem_type <- "min"
+res <- lp("min", objective_coefs, constraints_matrix, constraints_dir, constraints_rhs)
+print("ZLP (N_min):")
+res
+# LP Nmin-1
+objective_coefs <- replicate(ncol(X[[Nmin-1]]), 1)
+print(objective_coefs)
+constraints_matrix <- matrix(c(X[[Nmin-1]][1, ],
+                               X[[Nmin-1]][2, ]), nrow=2, byrow=TRUE)
+constraints_rhs <- c(x0[1], x0[2])
+constraints_dir <- c("=", "=")
+problem_type <- "min"
+res2 <- lp("min", objective_coefs, constraints_matrix, constraints_dir, constraints_rhs)
+print("ZLP (N_min - 1):")
+res2
+
+# LP for trajectory
+print("TETS FOR TRAJECTORY")
+
+mu <- (c("mu1"))
+for(i in 2:ncol(X[[Nmin-1]]))
+{
+    mu[i] <- paste0("mu",i)
+}
+mu <- ysym(mu)
+mu
+lambda <- ysym(c("l1", "l2", "l3", "l4"))
+lambda  
+temp <- ysym(X[[Nmin-1]])%*%mu - ysym(U)%*%lambda - A%*%x0
+temp
+
+constr1 <- as.numeric(str_extract_all(temp[1], "[+-]?[0-9]*\\.[0-9]*e?[+-]?[0-9]*")[[1]])
+constr1_rhs <- -constr1[length(constr1)]
+constr1 <- constr1[-length(constr1)]
+constr2 <- as.numeric(str_extract_all(temp[2], "[+-]?[0-9]*\\.[0-9]*e?[+-]?[0-9]*")[[1]])
+constr2_rhs <- -constr2[length(constr2)]
+constr2 <- constr2[-length(constr2)]
+
+constr3 <- c(replicate(ncol(X[[Nmin-1]]), 0))
+constr3 <- append(constr3, c(replicate(4, 1)))
+
+objective_coefs <- replicate(ncol(X[[Nmin-1]]), 1)
+objective_coefs <- append(objective_coefs, c(replicate(4, 0)))
+print(objective_coefs)
+constraints_matrix <- matrix(c(constr1, constr2, constr3), nrow=3, byrow=TRUE)
+print("CONSTRAINTS MATRIX:")
+constraints_matrix
+
+constraints_rhs <- c(constr1_rhs, constr2_rhs, 1)
+print("CONSTR RHS:")
+constraints_rhs
+constraints_dir <- c("=", "=", "=")
+res3 <- lp("min", objective_coefs, constraints_matrix, constraints_dir, constraints_rhs)
+res3
+res3$solution
+str(res3)
+
+###########
+print("TESTING FUNCTIONS..>")
+if(res3$objval < 1)
+{
+    control <- matrix(c(0, 0), nrow=2, byrow=TRUE)
+    print(control)
+    trajectory <- matrix(x0, nrow=2, byrow=TRUE)
+    print(trajectory)
+    print("TEST FOR K")
+    out <- get_x_trajectory(X, Nmin, A, U, control, trajectory)
+    print(out)
+}
+out <- data.frame(x=out[1, ], y=out[2, ])
+window1 <- window1 + geom_point(out, mapping=aes(x=x, y=y))
 
 print("H:")
 H <- t(solve(B))%*%diag(2)%*%solve(B)
@@ -215,12 +352,10 @@ for(i in 1:length(l))
     poly[[i+1]] <- p
 }
 
-# # N_min
-# Nmin <- 
 
-# X11()
-# window1
-# check_device()
+X11()
+window1
+check_device()
 
 # X11()
 # multiplot(plotlist=poly, cols=2)

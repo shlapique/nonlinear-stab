@@ -1,5 +1,6 @@
 library(ggplot2)
 library(Ryacas)
+library(stringr)
 
 check_device <- function()
 {
@@ -32,11 +33,30 @@ for(i in 1:Nmin){
     fun <- fun + (solve(ysym(h[[i]]))%*%psi_yac)/sqrt(psi_yac%*%solve(ysym(h[[i]]))%*%psi_yac)
 }
 fun
+text <- fun[1]
+print("THEN THE TEXT ITSELF")
+text <- text$yacas_cmd
+print(class(text))
+text
 
+
+# Matching pattern
+pattern <- "[+-]?[0-9]*\\.[0-9]*e?[+-]?[0-9]*"
+
+# Extracting matches
+# matches <- grep(pattern, text, value = TRUE, perl = TRUE)
+# matches <- sub("[+-]?[0-9]*\\.[0-9]*e?[+-]?[0-9]*", text)
+matches <- str_extract_all(text, "[+-]?[0-9]*\\.[0-9]*e?[+-]?[0-9]*")
+# matches <- str_extract_all(text, "\\d+")
+
+# Output
 print("ANSWER:")
+print(matches)
+
 # test <- y_eval(ysym("Simplify(-x0[1]/a)"), x0=fun)
 # test
-sol <- y_eval(ysym("OldSolve({-x0[1]/a == y0[1], -x0[2]/a == y0[2], psi0^2 + psi1^2 == 1}, {a, psi0, psi1})"), y0=fun, psi0=psi_yac[1], psi1=psi_yac[2], x0=x0)
+# sol <- y_eval(ysym("OldSolve({-x0[1]/a == y0[1], -x0[2]/a == y0[2], psi0^2 + psi1^2 == 1}, {a, psi0, psi1})"), y0=fun, psi0=psi_yac[1], psi1=psi_yac[2], x0=x0)
+# sol <- y_eval(ysym("OldSolve({-x0[1]/a == y0[1], -x0[2]/a == y0[2], psi0^2 + psi1^2 == 1}, {a, psi0, psi1})"), y0=fun, psi0=psi_yac[1], psi1=psi_yac[2], x0=x0)
 # sol <- y_eval(ysym("OldSolve({(x*y)/2-3*a == 0, x^2/4-(3*a)/2 == 0, 45-(3*x+(3*y)/2) == 0}, {x, y, a})"))
-sol
+# sol
 
