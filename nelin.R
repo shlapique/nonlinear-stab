@@ -357,6 +357,6 @@ X11()
 window1
 check_device()
 
-# X11()
-# multiplot(plotlist=poly, cols=2)
-# check_device()
+X11()
+multiplot(plotlist=poly, cols=2)
+check_device()
