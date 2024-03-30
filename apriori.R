@@ -81,12 +81,10 @@ pg_data_x <- ggplot_build(el)$data[[1]]["x"]
 pg_data_y <- ggplot_build(el)$data[[1]]["y"]
 el_data <- cbind(pg_data_x, pg_data_y)
 
-m <- max(sqrt(abs(el_data[, 1])^2 + abs(el_data[, 2])^2))
+maxim <- max(sqrt(abs(el_data[, 1])^2 + abs(el_data[, 2])^2))
+minim <- min(sqrt(abs(el_data[, 1])^2 + abs(el_data[, 2])^2))
 
-dat <- circleFun(c(0, 0), r=m, npoints=500)
-window <- geom_path(dat, mapping=aes(x, y, z=NULL))
+circ_max <- geom_path(circleFun(c(0, 0), r=maxim, npoints=500), mapping=aes(x, y, z=NULL), color="purple")
+circ_min <- geom_path(circleFun(c(0, 0), r=minim, npoints=500), mapping=aes(x, y, z=NULL), color="green")
 
-
-X11()
-el + window
-check_device()
+el + circ_max + circ_min
