@@ -2,6 +2,7 @@ library(ggplot2)
 library(lpSolve)
 library(Ryacas)
 library(stringr)
+library(nloptr)
 
 check_device <- function()
 {
@@ -147,8 +148,48 @@ get_x_trajectory <- function(X, Nmin, A, U, control, trajectory)
 Norm <- function(vec, q) {
     s <- 0
     for(i in 1:length(vec)) {
-        s <- s + vec[i]^q
+        s <- s + abs(vec[i]^q)
     }
+    return(s^(1/q))
+}
+
+# solve nonlinear system of equations for maximization problem
+optim_el <- function(x1_max, x2_max, P_rot, alpha, rr) {
+    s1 <- 100
+    s2 <- 100
+    mesh_x_1 <- seq(0, x1_max, length=s1)
+    mesh_x_2 <- seq(0, x2_max, length=s2)
+
+    # mesh_bulok <- matrix(list(), ncol=s1, nrow=s2)
+    mesh_bulok <- list()
+    # m <- matrix(list(), ncol=s1, nrow=s2)
+    for(i in 1:length(mesh_x_1)) {
+        for(j in 1:length(mesh_x_2)) {
+            # check constraints for every node
+            tmp <- TRUE
+            for(nn in 1:ncol(P_rot)) {
+                tmp <- Norm(diag(c(mesh_x_1[i], mesh_x_2[j]))%*%P_rot[, nn], rr) <= alpha[1]
+                print(tmp)
+                if(tmp == FALSE) {
+                    break
+                }
+            }
+            if(tmp == TRUE && is.na(tmp) == FALSE) {
+                mesh_bulok <- cbind(mesh_bulok, c(mesh_x_1[i], mesh_x_2[j],
+                                                   mesh_x_1[i] * mesh_x_2[j]))
+            }
+        }
+    }
+    mmm <- 0
+    a <- c(0, 0) # for a1 a2
+    for(l in 1:ncol(mesh_bulok)) {
+
+        if(mesh_bulok[[3, l]][1] >= mmm) {
+            mmm <- mesh_bulok[[3, l]][1]
+            a <- c(mesh_bulok[[1, l]][1], mesh_bulok[[2, l]][1])
+        }
+    }
+    return(a)
 }
 
 print("A_tilde:")
@@ -222,18 +263,14 @@ window <- ggplot() + pplot(U, "green") + pplot(U_rot, "purple")
 r_arr <- c(8/7, 6/5, 4/3, 2, 4, 6, 8)
 P_rot <- solve(S)%*%P
 
-constraints_matrix <- matrix(c())
+constraints_matrix <- matrix()
 # ||diag(a)*p^k||^q <= alpha_k 
-# for(i in ncol(P_rot)) {
-#     rbind(
+
+aa_2 <- optim_el(x1_max, x2_max, P_rot, alpha, 2)
+
+# aas <- list()
+# for(ri in 1:length(r_arr)) {
+#     aas <- cbind(aas, optim_el(x1_max, x2_max, P_rot, alpha, r_arr[4]))
 # }
-
-# <- matrix(c(constr1, constr2, constr3), nrow=3, byrow=TRUE)
-# print("CONSTRAINTS MATRIX:")
-# print(constraints_matrix)
-
-# constraints_rhs <- c(constr1_rhs, constr2_rhs, 1)
-# print("CONSTR RHS:")
-# print(constraints_rhs)
-# constraints_dir <- c("=", "=", "=")
-# res <- lp("min", objective_coefs, constraints_matrix, constraints_dir, constraints_rhs)
+# aas <- cbind(aas, optim_el(x1_max, x2_max, P_rot, alpha, r_arr[1]))
+aas <- cbind(aas, optim_el(x1_max, x2_max, P_rot, alpha, 1.3333))
