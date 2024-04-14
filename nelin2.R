@@ -146,10 +146,11 @@ get_x_trajectory <- function(X, Nmin, A, U, control, trajectory)
 }
 
 Norm <- function(vec, q) {
-    s <- 0
-    for(i in 1:length(vec)) {
-        s <- s + abs(vec[i]^q)
-    }
+    # s <- 0
+    # for(i in 1:length(vec)) {
+    #     s <- s + abs(vec[i]^q)
+    # }
+    s <- sum(abs(vec)^q)
     return(s^(1/q))
 }
 
@@ -169,12 +170,11 @@ optim_el <- function(x1_max, x2_max, P_rot, alpha, rr) {
             tmp <- TRUE
             for(nn in 1:ncol(P_rot)) {
                 tmp <- Norm(diag(c(mesh_x_1[i], mesh_x_2[j]))%*%P_rot[, nn], rr) <= alpha[1]
-                print(tmp)
                 if(tmp == FALSE) {
                     break
                 }
             }
-            if(tmp == TRUE && is.na(tmp) == FALSE) {
+            if(tmp == TRUE) {
                 mesh_bulok <- cbind(mesh_bulok, c(mesh_x_1[i], mesh_x_2[j],
                                                    mesh_x_1[i] * mesh_x_2[j]))
             }
@@ -190,6 +190,13 @@ optim_el <- function(x1_max, x2_max, P_rot, alpha, rr) {
         }
     }
     return(a)
+}
+
+# mera hyper-ellips 
+# a_ast -- list()
+Mera <- function(a_ast, r_i) {
+    n <- 2
+    return(a_ast[[1]] * a_ast[[2]] * ((2 * gamma(1/r_i + 1))^n) / (gamma(n/r_i + 1)))
 }
 
 print("A_tilde:")
@@ -266,11 +273,38 @@ P_rot <- solve(S)%*%P
 constraints_matrix <- matrix()
 # ||diag(a)*p^k||^q <= alpha_k 
 
-aa_2 <- optim_el(x1_max, x2_max, P_rot, alpha, 2)
+aas <- list()
+for(ri in 1:length(r_arr)) {
+    aas <- cbind(aas, optim_el(x1_max, x2_max, P_rot, alpha, r_arr[ri]))
+}
 
-# aas <- list()
-# for(ri in 1:length(r_arr)) {
-#     aas <- cbind(aas, optim_el(x1_max, x2_max, P_rot, alpha, r_arr[4]))
-# }
-# aas <- cbind(aas, optim_el(x1_max, x2_max, P_rot, alpha, r_arr[1]))
-aas <- cbind(aas, optim_el(x1_max, x2_max, P_rot, alpha, 1.3333))
+# compute the best `mera` for hyper-ellipse
+best_mera <- 0
+best_mera_index <- 0
+for(i in 1:ncol(aas)) {
+    if(Mera(aas[, i], r_arr[i]) > best_mera) {
+        best_mera_index <- i
+        best_mera <- Mera(aas[, i], r_arr[i])
+    }
+}
+
+# find ellipse equation
+y1 <- ysym("y1")
+y2 <- ysym("y2")
+Y <- ysym(S) %*% c(y1, y2)
+
+c1 <- as.numeric(yac_str(paste0("Coef(", Y[1],", y1, 1)")))
+c1[2] <- as.numeric(yac_str(paste0("Coef(", Y[1],", y2, 1)")))
+c2 <- as.numeric(yac_str(paste0("Coef(", Y[2],", y1, 1)")))
+
+# x <- seq(-15, 15, length=500)*c1[1] + seq(-15, 15, length=500)*c1[2]
+# y <- seq(-15, 15, length=500)*c2
+x <- seq(-15, 15, length=500)
+y <- seq(-15, 15, length=500)
+
+z <- outer(x, y, function(x, y) abs(x / aas[, best_mera_index][[1]])^r_arr[best_mera_index] + abs(y / aas[, best_mera_index][[2]])^r_arr[best_mera_index] -1)
+
+df <- data.frame(expand.grid(x = x, y = y), z = c(z)) 
+el <- ggplot(df, aes(x = x, y = y, z = z)) + geom_contour(aes(z = z), breaks = 0, colour="red")
+
+window2 <- el + pplot(U_rot, "purple")

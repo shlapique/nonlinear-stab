@@ -1,5 +1,6 @@
 *.swp
 renv
+env
 *.mw
 *.Rprofile
 Rplots.pdf
