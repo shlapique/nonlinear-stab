@@ -146,10 +146,6 @@ get_x_trajectory <- function(X, Nmin, A, U, control, trajectory)
 }
 
 Norm <- function(vec, q) {
-    # s <- 0
-    # for(i in 1:length(vec)) {
-    #     s <- s + abs(vec[i]^q)
-    # }
     s <- sum(abs(vec)^q)
     return(s^(1/q))
 }
@@ -293,12 +289,6 @@ y1 <- ysym("y1")
 y2 <- ysym("y2")
 Y <- ysym(S) %*% c(y1, y2)
 
-c1 <- as.numeric(yac_str(paste0("Coef(", Y[1],", y1, 1)")))
-c1[2] <- as.numeric(yac_str(paste0("Coef(", Y[1],", y2, 1)")))
-c2 <- as.numeric(yac_str(paste0("Coef(", Y[2],", y1, 1)")))
-
-# x <- seq(-15, 15, length=500)*c1[1] + seq(-15, 15, length=500)*c1[2]
-# y <- seq(-15, 15, length=500)*c2
 x <- seq(-15, 15, length=500)
 y <- seq(-15, 15, length=500)
 
@@ -308,3 +298,4 @@ df <- data.frame(expand.grid(x = x, y = y), z = c(z))
 el <- ggplot(df, aes(x = x, y = y, z = z)) + geom_contour(aes(z = z), breaks = 0, colour="red")
 
 window2 <- el + pplot(U_rot, "purple")
+

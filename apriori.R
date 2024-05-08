@@ -9,14 +9,17 @@ check_device <- function()
 my_f <- function(x, y){
     return(abs(2*x + 3*y)^4 + abs(x + 2*y)^4 -1)
 }
-circleFun <- function(center = c(0,0), r = 1, npoints = 100){
+
+circleFun <- function(center = c(0,0), r = 1, npoints = 100) 
+{
     tt <- seq(0,2*pi,length.out = npoints)
     xx <- center[1] + r * cos(tt)
     yy <- center[2] + r * sin(tt)
     return(data.frame(x = xx, y = yy))
 }
 
-find_points <- function(x, y) {
+find_points <- function(x, y) 
+{
     for(i in x) {
         for(j in y) {
             if(all.equal(my_f(i, j), 0, 1e-6)){
@@ -27,6 +30,8 @@ find_points <- function(x, y) {
         }
     }
 }
+
+x0 <- c(10, -30)
 
 print("A_1:")
 A_1 <- matrix(c(-1.3, -1.8, 0.3, 0.2), 2)
@@ -88,3 +93,39 @@ circ_max <- geom_path(circleFun(c(0, 0), r=maxim, npoints=500), mapping=aes(x, y
 circ_min <- geom_path(circleFun(c(0, 0), r=minim, npoints=500), mapping=aes(x, y, z=NULL), color="green")
 
 el + circ_max + circ_min
+
+
+lambda <- abs(ei2$values[1])
+y <- sqrt((solve(S2)%*%x0)[1]^2 + (solve(S2)%*%x0)[2]^2)
+lowerN <- trunc(-(log(1 - (abs(y)*(abs(lambda) - 1))/maxim)/log(abs(lambda)))) + 1
+upperN <- trunc(-(log(1 - (abs(y)*(abs(lambda) - 1))/minim)/log(abs(lambda)))) + 1
+
+
+print("############# PART 1 ###########")
+
+print("s1")
+S1 <- matrix(c(Re(ei1$vectors[, 1]), Re(ei1$vectors[, 2])), ncol=2)
+S1
+
+# find ellipse equation
+y1 <- ysym("y1")
+y2 <- ysym("y2")
+Y1 <- ysym(S1) %*% c(y1, y2)
+
+c1 <- as.numeric(yac_str(paste0("Coef(", Y1[1],", y1, 1)")))
+c1[2] <- as.numeric(yac_str(paste0("Coef(", Y1[1],", y2, 1)")))
+c2 <- as.numeric(yac_str(paste0("Coef(", Y1[2],", y1, 1)")))
+
+x <- seq(-15, 15, length=500)*c1[1] + seq(-15, 15, length=500)*c1[2]
+y <- seq(-15, 15, length=500)*c2
+
+z <- outer(x, y, function(x,y) abs(2*x + 3*y)^4 + abs(x + 2*y)^4 -1)
+df <- data.frame(expand.grid(x = x, y = y), z = c(z)) 
+el1 <- ggplot(df, aes(x = x, y = y, z = z)) + geom_contour(aes(z = z), breaks = 0, colour="red")
+
+x1 <- ysym("x1")
+x2 <- ysym("x2")
+U1max <- 
+U2max <- 
+z <- outer(x, y, function(x,y) abs(2*x + 3*y)^4 + abs(x + 2*y)^4 -1)
+df <- data.frame(expand.grid(x = x, y = y), z = c(z)) 
